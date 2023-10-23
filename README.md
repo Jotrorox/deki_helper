@@ -6,7 +6,7 @@
 </div>
 -->
 
-<h1 align="center">Deki_helper</h1>
+<h1 align="center">Deki Helper</h1>
 
 <p align="center">
   <img alt="Github top language" src="https://img.shields.io/github/languages/top/jotrorox/deki_helper?color=56BEB8">
@@ -71,7 +71,7 @@ Before starting :checkered_flag:, you need to have [Git](https://git-scm.com) an
 $ git clone https://github.com/jotrorox/deki_helper
 
 # Access
-$ cd deki_helper
+$ cd deki_helper/src
 
 # Install dependencies
 $ go mod tidy
