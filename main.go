@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	twitch "github.com/gempir/go-twitch-irc/v2"
+	twitch "github.com/gempir/go-twitch-irc/v4"
 	dotenv "github.com/joho/godotenv"
 )
 
