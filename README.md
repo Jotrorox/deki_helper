@@ -57,7 +57,7 @@ The following tools were used in this project:
 
 - [Golang](https://go.dev/)
 - [godotenv](https://github.com/joho/godotenv/)
-- [go-twitch-irc](https://github.com/gempir/go-twitch-irc/v2/)
+- [go-twitch-irc](https://github.com/gempir/go-twitch-irc/)
 
 
 ## :white_check_mark: Requirements ##
