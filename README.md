@@ -70,6 +70,9 @@ Before starting :checkered_flag:, you need to have [Git](https://git-scm.com) an
 # Clone this project
 $ git clone https://github.com/jotrorox/deki_helper
 
+# Setup your token in the .env file
+# For help see look in the .env.example file
+
 # Access
 $ cd deki_helper/src
 
