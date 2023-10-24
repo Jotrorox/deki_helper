@@ -125,6 +125,10 @@ func addEntry(db *gorm.DB, cmd Command) error {
 	return nil
 }
 
+func UpdateRow(db *gorm.DB, keyword string, newData Command) error {
+	return db.Model(&Command{}).Where("trigger = ?", keyword).Updates(newData).Error
+}
+
 func queryEntries(db *gorm.DB) ([]Command, error) {
 	var entries []Command
 	result := db.Find(&entries)
@@ -163,22 +167,11 @@ func main() {
 	cmd_iter := 0
 	tmp_command := Command{}
 
+	update_cmd_iter := 0
+	update_tmp_command := Command{}
+	update_cmd_key := ""
+
 	client.OnPrivateMessage(func(message twitch.PrivateMessage) {
-		commands, err := queryEntries(db)
-		if err != nil {
-			panic(err)
-		}
-
-		for _, command := range commands {
-			if command.Trigger == message.Message {
-				if cfg.USER_MENTION {
-					client.Say(message.Channel, "@"+message.User.Name+"! "+command.Response)
-				} else {
-					client.Say(message.Channel, command.Response)
-				}
-			}
-		}
-
 		for _, uname := range cfg.CMD_ADD_USER {
 			if message.User.Name == uname {
 				if cmd_iter == 0 && message.Message == "!add_cmd" {
@@ -201,6 +194,52 @@ func main() {
 						client.Say(message.Channel, "@"+message.User.Name+" The command adding proces has been aborted")
 						cmd_iter = 0
 					}
+				}
+
+				if update_cmd_iter == 0 && message.Message == "!update_cmd" {
+					client.Say(message.Channel, "@"+message.User.Name+" Which command do you wanna change?")
+					update_cmd_iter = 1
+				} else if update_cmd_iter == 1 {
+					update_cmd_key = message.Message
+					client.Say(message.Channel, "@"+message.User.Name+" What should the new Trigger for your command be?")
+					update_cmd_iter = 2
+				} else if update_cmd_iter == 2 {
+					update_tmp_command.Trigger = message.Message
+					client.Say(message.Channel, "@"+message.User.Name+" What should the new Response for your command be?")
+					update_cmd_iter = 3
+				} else if update_cmd_iter == 3 {
+					update_tmp_command.Response = message.Message
+					client.Say(message.Channel, "@"+message.User.Name+" Review everything, should this command be updated? (yes/no)")
+					update_cmd_iter = 4
+				} else if update_cmd_iter == 4 {
+					if message.Message == "yes" {
+						err = UpdateRow(db, update_cmd_key, update_tmp_command)
+						if err != nil {
+							client.Say(message.Channel, "@"+message.User.Name+" Something went wrong updating the command")
+							update_cmd_iter = 0
+						} else {
+							client.Say(message.Channel, "@"+message.User.Name+" The command has been updated")
+							update_cmd_iter = 0
+						}
+					} else {
+						client.Say(message.Channel, "@"+message.User.Name+" The command updating process has been aborted")
+						update_cmd_iter = 0
+					}
+				}
+			}
+		}
+
+		commands, err := queryEntries(db)
+		if err != nil {
+			panic(err)
+		}
+
+		for _, command := range commands {
+			if command.Trigger == message.Message {
+				if cfg.USER_MENTION {
+					client.Say(message.Channel, "@"+message.User.Name+"! "+command.Response)
+				} else {
+					client.Say(message.Channel, command.Response)
 				}
 			}
 		}
