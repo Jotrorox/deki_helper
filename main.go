@@ -144,6 +144,9 @@ func main() {
 
 	client := twitch.NewClient(cfg.BOT_ID, cfg.BOT_TOKEN)
 
+	cmd_iter := 0
+	tmp_command := Command{}
+
 	client.OnPrivateMessage(func(message twitch.PrivateMessage) {
 		commands, err := queryEntries(db)
 		if err != nil {
@@ -157,6 +160,38 @@ func main() {
 				} else {
 					client.Say(message.Channel, command.Response)
 				}
+			}
+		}
+
+		if message.User.Name == "jotrorox_" {
+			if cmd_iter == 0 && message.Message == "!add_cmd" {
+				client.Say(message.Channel, "@"+message.User.Name+" What should the Trigger for you new command be?")
+				cmd_iter = 1
+				fmt.Println("Done 1")
+				fmt.Println(cmd_iter)
+			} else if cmd_iter == 1 {
+				tmp_command.Trigger = message.Message
+				client.Say(message.Channel, "@"+message.User.Name+" What should the Response for you new command be?")
+				cmd_iter = 2
+				fmt.Println("Done 2")
+				fmt.Println(cmd_iter)
+			} else if cmd_iter == 2 {
+				tmp_command.Response = message.Message
+				client.Say(message.Channel, "@"+message.User.Name+" Review everything, should this command be added? (yes/no)")
+				cmd_iter = 3
+				fmt.Println("Done 3")
+				fmt.Println(cmd_iter)
+			} else if cmd_iter == 3 {
+				if message.Message == "yes" {
+					addEntry(db, tmp_command)
+					client.Say(message.Channel, "@"+message.User.Name+" The command has been added")
+					cmd_iter = 0
+				} else {
+					client.Say(message.Channel, "@"+message.User.Name+" The command adding proces has been aborted")
+					cmd_iter = 0
+				}
+				fmt.Println("Done 4")
+				fmt.Println(cmd_iter)
 			}
 		}
 	})
