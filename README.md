@@ -56,7 +56,7 @@ Just a simple twitch Bot that provides a helping hand in the Streams of [Deki](h
 The following tools were used in this project:
 
 - [Golang](https://go.dev/)
-- [godotenv](https://github.com/joho/godotenv/)
+- [go-toml](https://github.com/pelletier/go-toml)
 - [go-twitch-irc](https://github.com/gempir/go-twitch-irc/)
 
 
@@ -70,9 +70,6 @@ Before starting :checkered_flag:, you need to have [Git](https://git-scm.com) an
 # Clone this project
 $ git clone https://github.com/jotrorox/deki_helper
 
-# Setup your token in the .env file
-# For help see look in the .env.example file
-
 # Access
 $ cd deki_helper/src
 
@@ -84,9 +81,6 @@ $ go run .
 
 # Or to build on the respective platform
 $ go build .
-
-# If you want to build from windows to linux
-$ .\build_to_linux.ps1
 ```
 
 **If your don't mind older builds, just download the build from the releases tab**
