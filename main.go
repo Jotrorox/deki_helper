@@ -129,6 +129,10 @@ func UpdateRow(db *gorm.DB, keyword string, newData Command) error {
 	return db.Model(&Command{}).Where("trigger = ?", keyword).Updates(newData).Error
 }
 
+func RemoveRow(db *gorm.DB, keyword string) error {
+	return db.Where("trigger = ?", keyword).Delete(&Command{}).Error
+}
+
 func queryEntries(db *gorm.DB) ([]Command, error) {
 	var entries []Command
 	result := db.Find(&entries)
@@ -170,6 +174,9 @@ func main() {
 	update_cmd_iter := 0
 	update_tmp_command := Command{}
 	update_cmd_key := ""
+
+	delete_cmd_iter := 0
+	delete_cmd_key := ""
 
 	client.OnPrivateMessage(func(message twitch.PrivateMessage) {
 		for _, uname := range cfg.CMD_ADD_USER {
@@ -224,6 +231,29 @@ func main() {
 					} else {
 						client.Say(message.Channel, "@"+message.User.Name+" The command updating process has been aborted")
 						update_cmd_iter = 0
+					}
+				}
+
+				if delete_cmd_iter == 0 && message.Message == "!delete_cmd" {
+					client.Say(message.Channel, "@"+message.User.Name+" Which command do you wanna delete?")
+					delete_cmd_iter = 1
+				} else if delete_cmd_iter == 1 {
+					delete_cmd_key = message.Message
+					client.Say(message.Channel, "@"+message.User.Name+" Review everything, should this command be deleted? (yes/no)")
+					delete_cmd_iter = 2
+				} else if delete_cmd_iter == 2 {
+					if message.Message == "yes" {
+						err = RemoveRow(db, delete_cmd_key)
+						if err != nil {
+							client.Say(message.Channel, "@"+message.User.Name+" Something went wrong while deleting the command")
+							delete_cmd_iter = 0
+						} else {
+							client.Say(message.Channel, "@"+message.User.Name+" The command has been deleted")
+							delete_cmd_iter = 0
+						}
+					} else {
+						client.Say(message.Channel, "@"+message.User.Name+" The command deleting process has been aborted")
+						delete_cmd_iter = 0
 					}
 				}
 			}
