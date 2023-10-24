@@ -58,6 +58,8 @@ The following tools were used in this project:
 - [Golang](https://go.dev/)
 - [go-toml](https://github.com/pelletier/go-toml)
 - [go-twitch-irc](https://github.com/gempir/go-twitch-irc/)
+- [gorm](https://gorm.io/)
+- [sqlite](https://github.com/glebarez/sqlite)
 
 
 ## :white_check_mark: Requirements ##
