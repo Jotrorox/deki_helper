@@ -17,6 +17,7 @@ type Config struct {
 	BOT_TOKEN    string
 	CHANNEL      string
 	USER_MENTION bool
+	CMD_ADD_USER []string
 }
 
 type Command struct {
@@ -49,18 +50,24 @@ func createConfigFile(filename string) error {
 	bot_token = "oauth:" + bot_token
 	fmt.Print("The Channel: ")
 	channel, _ := reader.ReadString('\n')
+	fmt.Print("A User able to add commands: ")
+	cmd_au, _ := reader.ReadString('\n')
 	fmt.Print("Mention the User after a command (y/n): ")
 	mu1, _ := reader.ReadString('\n')
 	mu2 := false
 	if mu1 == "y" {
 		mu2 = true
 	}
+	var cmd_au_arr []string
+	cmd_au_arr = append(cmd_au_arr, cmd_au)
+	cmd_au_arr = append(cmd_au_arr, channel)
 	config := &Config{
 		DB_PATH:      db_path,
 		BOT_ID:       bot_id,
 		BOT_TOKEN:    bot_token,
 		CHANNEL:      channel,
 		USER_MENTION: mu2,
+		CMD_ADD_USER: cmd_au_arr,
 	}
 	data, err := toml.Marshal(config)
 	if err != nil {
@@ -131,17 +138,6 @@ func main() {
 		panic(err)
 	}
 
-	/*
-		test_cmd := Command{
-			Trigger:  "!help",
-			Response: "Help!",
-		}
-		err = addEntry(db, test_cmd)
-		if err != nil {
-			panic(err)
-		}
-	*/
-
 	client := twitch.NewClient(cfg.BOT_ID, cfg.BOT_TOKEN)
 
 	cmd_iter := 0
@@ -163,35 +159,29 @@ func main() {
 			}
 		}
 
-		if message.User.Name == "jotrorox_" {
-			if cmd_iter == 0 && message.Message == "!add_cmd" {
-				client.Say(message.Channel, "@"+message.User.Name+" What should the Trigger for you new command be?")
-				cmd_iter = 1
-				fmt.Println("Done 1")
-				fmt.Println(cmd_iter)
-			} else if cmd_iter == 1 {
-				tmp_command.Trigger = message.Message
-				client.Say(message.Channel, "@"+message.User.Name+" What should the Response for you new command be?")
-				cmd_iter = 2
-				fmt.Println("Done 2")
-				fmt.Println(cmd_iter)
-			} else if cmd_iter == 2 {
-				tmp_command.Response = message.Message
-				client.Say(message.Channel, "@"+message.User.Name+" Review everything, should this command be added? (yes/no)")
-				cmd_iter = 3
-				fmt.Println("Done 3")
-				fmt.Println(cmd_iter)
-			} else if cmd_iter == 3 {
-				if message.Message == "yes" {
-					addEntry(db, tmp_command)
-					client.Say(message.Channel, "@"+message.User.Name+" The command has been added")
-					cmd_iter = 0
-				} else {
-					client.Say(message.Channel, "@"+message.User.Name+" The command adding proces has been aborted")
-					cmd_iter = 0
+		for _, uname := range cfg.CMD_ADD_USER {
+			if message.User.Name == uname {
+				if cmd_iter == 0 && message.Message == "!add_cmd" {
+					client.Say(message.Channel, "@"+message.User.Name+" What should the Trigger for you new command be?")
+					cmd_iter = 1
+				} else if cmd_iter == 1 {
+					tmp_command.Trigger = message.Message
+					client.Say(message.Channel, "@"+message.User.Name+" What should the Response for you new command be?")
+					cmd_iter = 2
+				} else if cmd_iter == 2 {
+					tmp_command.Response = message.Message
+					client.Say(message.Channel, "@"+message.User.Name+" Review everything, should this command be added? (yes/no)")
+					cmd_iter = 3
+				} else if cmd_iter == 3 {
+					if message.Message == "yes" {
+						addEntry(db, tmp_command)
+						client.Say(message.Channel, "@"+message.User.Name+" The command has been added")
+						cmd_iter = 0
+					} else {
+						client.Say(message.Channel, "@"+message.User.Name+" The command adding proces has been aborted")
+						cmd_iter = 0
+					}
 				}
-				fmt.Println("Done 4")
-				fmt.Println(cmd_iter)
 			}
 		}
 	})
