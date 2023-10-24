@@ -36,8 +36,9 @@
   <a href="#rocket-technologies">Technologies</a> &#xa0; | &#xa0;
   <a href="#white_check_mark-requirements">Requirements</a> &#xa0; | &#xa0;
   <a href="#checkered_flag-starting">Starting</a> &#xa0; | &#xa0;
+  <a href="#dash-Getting_Started">Getting Started</a> &#xa0; | &#xa0;
   <a href="#memo-license">License</a> &#xa0; | &#xa0;
-  <a href="https://github.com/{{YOUR_GITHUB_USERNAME}}" target="_blank">Author</a>
+  <a href="https://github.com/jotrorox" target="_blank">Author</a>
 </p>
 
 <br>
@@ -48,8 +49,10 @@ Just a simple twitch Bot that provides a helping hand in the Streams of [Deki](h
 
 ## :sparkles: Features ##
 
-:heavy_check_mark: Simple commands;\
-:heavy_check_mark: Config using env files;
+:heavy_check_mark: Config using a toml file;\
+:heavy_check_mark: Interactive Command creation;\
+:heavy_check_mark: Advanced on the fly command creation;\
+:heavy_check_mark: Database storage;
 
 ## :rocket: Technologies ##
 
@@ -86,6 +89,13 @@ $ go build .
 ```
 
 **If your don't mind older builds, just download the build from the releases tab**
+
+## :dash: Getting Started ##
+
+The bot ships with three commands to add, update and remove custom ones on the fly.\
+Those are: `!add_cmd`, `!update_cmd` and `!delete_cmd`\
+Those will walk you through a interactive process to do the important tasks\
+Easy Right?!
 
 ## :memo: License ##
 
