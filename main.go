@@ -2,10 +2,12 @@ package main
 
 import (
 	"bufio"
+	"database/sql"
 	"fmt"
 	"os"
 
 	twitch "github.com/gempir/go-twitch-irc/v4"
+	_ "github.com/mattn/go-sqlite3"
 	toml "github.com/pelletier/go-toml"
 )
 
@@ -14,6 +16,12 @@ type Config struct {
 	BOT_ID    string
 	BOT_TOKEN string
 	CHANNEL   string
+}
+
+type Command struct {
+	ID       int
+	Trigger  string
+	Response string
 }
 
 func readConfigFile(filename string) (*Config, error) {
@@ -56,6 +64,27 @@ func createConfigFile(filename string) error {
 	return nil
 }
 
+func setupDB(cfg *Config) *sql.DB {
+	db, err := sql.Open("sqlite3", cfg.DB_PATH)
+	if err != nil {
+		fmt.Println("Failed to open database:", err)
+		panic(err)
+	}
+
+	defer db.Close()
+
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS commands (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		trigger TEXT,
+		response TEXT
+	)`)
+	if err != nil {
+		fmt.Println("Failed to create table:", err)
+		panic(err)
+	}
+	return db
+}
+
 func main() {
 	cfg_filename := "config.toml"
 
@@ -70,23 +99,38 @@ func main() {
 
 	cfg, _ := readConfigFile(cfg_filename)
 
+	db := setupDB(cfg)
+
+	_, err = db.Exec("INSERT INTO entries (trigger, response) VALUES (?, ?)", "!help", "Help!")
+	if err != nil {
+		fmt.Println("Failed to add entry:", err)
+		return
+	}
+
 	client := twitch.NewClient(cfg.BOT_ID, cfg.BOT_TOKEN)
 
 	client.OnPrivateMessage(func(message twitch.PrivateMessage) {
-		if message.Message == "!help" {
-			client.Say(message.Channel, "@"+message.User.Name+" Right now there are only 4 commands: '!dc', 'insta', '!game' and '!lurk'. If you want more please contact deki!")
+		rows, err := db.Query("SELECT * FROM commands")
+		if err != nil {
+			fmt.Println("Failed to query entries")
+			panic(err)
 		}
-		if message.Message == "!dc" {
-			client.Say(message.Channel, "@"+message.User.Name+" the link to my Discord Server: https://discord.gg/Av9awsZz6K")
+		defer rows.Close()
+
+		var commands []Command
+		for rows.Next() {
+			var command Command
+			if err := rows.Scan(&command.ID, &command.Trigger, &command.Response); err != nil {
+				fmt.Println("Failed to scan entry:", err)
+				return
+			}
+			commands = append(commands, command)
 		}
-		if message.Message == "!insta" {
-			client.Say(message.Channel, "@"+message.User.Name+" the link to my Instagram: https://www.instagram.com/dekisenpaitm")
-		}
-		if message.Message == "!game" {
-			client.Say(message.Channel, "@"+message.User.Name+" the link to the game I'm developing: https://dekisenpaitm.itch.io/project-soul")
-		}
-		if message.Message == "!lurk" {
-			client.Say(message.Channel, "@"+message.User.Name+" is now lurking. Enjoy your time and lean back!")
+
+		for _, command := range commands {
+			if message.Message == command.Trigger {
+				client.Say(message.Channel, command.Response)
+			}
 		}
 	})
 
