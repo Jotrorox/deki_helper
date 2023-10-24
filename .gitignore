@@ -4,3 +4,4 @@ deki_helper
 deki_helper.exe
 /target
 config.toml
+commands.db

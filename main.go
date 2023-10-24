@@ -2,24 +2,25 @@ package main
 
 import (
 	"bufio"
-	"database/sql"
 	"fmt"
 	"os"
 
 	twitch "github.com/gempir/go-twitch-irc/v4"
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/glebarez/sqlite"
 	toml "github.com/pelletier/go-toml"
+	"gorm.io/gorm"
 )
 
 type Config struct {
-	DB_PATH   string
-	BOT_ID    string
-	BOT_TOKEN string
-	CHANNEL   string
+	DB_PATH      string
+	BOT_ID       string
+	BOT_TOKEN    string
+	CHANNEL      string
+	USER_MENTION bool
 }
 
 type Command struct {
-	ID       int
+	ID       uint
 	Trigger  string
 	Response string
 }
@@ -41,17 +42,25 @@ func createConfigFile(filename string) error {
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("Database path (commands.db): ")
 	db_path, _ := reader.ReadString('\n')
-	fmt.Print("Your Bot ID: ")
+	fmt.Print("Your Bot Name: ")
 	bot_id, _ := reader.ReadString('\n')
 	fmt.Print("Your OAuth Token: ")
 	bot_token, _ := reader.ReadString('\n')
+	bot_token = "oauth:" + bot_token
 	fmt.Print("The Channel: ")
 	channel, _ := reader.ReadString('\n')
+	fmt.Print("Mention the User after a command (y/n): ")
+	mu1, _ := reader.ReadString('\n')
+	mu2 := false
+	if mu1 == "y" {
+		mu2 = true
+	}
 	config := &Config{
-		DB_PATH:   db_path,
-		BOT_ID:    bot_id,
-		BOT_TOKEN: bot_token,
-		CHANNEL:   channel,
+		DB_PATH:      db_path,
+		BOT_ID:       bot_id,
+		BOT_TOKEN:    bot_token,
+		CHANNEL:      channel,
+		USER_MENTION: mu2,
 	}
 	data, err := toml.Marshal(config)
 	if err != nil {
@@ -64,25 +73,38 @@ func createConfigFile(filename string) error {
 	return nil
 }
 
-func setupDB(cfg *Config) *sql.DB {
-	db, err := sql.Open("sqlite3", cfg.DB_PATH)
+func connectToSQLite(cfg *Config) (*gorm.DB, error) {
+	db, err := gorm.Open(sqlite.Open(cfg.DB_PATH), &gorm.Config{})
 	if err != nil {
-		fmt.Println("Failed to open database:", err)
-		panic(err)
+		return nil, err
 	}
+	return db, nil
+}
 
-	defer db.Close()
-
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS commands (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		trigger TEXT,
-		response TEXT
-	)`)
+func createEntryTable(db *gorm.DB) error {
+	err := db.AutoMigrate(&Command{})
 	if err != nil {
-		fmt.Println("Failed to create table:", err)
-		panic(err)
+		return err
 	}
-	return db
+	return nil
+}
+
+func addEntry(db *gorm.DB, cmd Command) error {
+	entry := cmd
+	result := db.Create(&entry)
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
+}
+
+func queryEntries(db *gorm.DB) ([]Command, error) {
+	var entries []Command
+	result := db.Find(&entries)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return entries, nil
 }
 
 func main() {
@@ -99,37 +121,42 @@ func main() {
 
 	cfg, _ := readConfigFile(cfg_filename)
 
-	db := setupDB(cfg)
-
-	_, err = db.Exec("INSERT INTO entries (trigger, response) VALUES (?, ?)", "!help", "Help!")
+	db, err := connectToSQLite(cfg)
 	if err != nil {
-		fmt.Println("Failed to add entry:", err)
-		return
+		panic(err)
 	}
+
+	err = createEntryTable(db)
+	if err != nil {
+		panic(err)
+	}
+
+	/*
+		test_cmd := Command{
+			Trigger:  "!help",
+			Response: "Help!",
+		}
+		err = addEntry(db, test_cmd)
+		if err != nil {
+			panic(err)
+		}
+	*/
 
 	client := twitch.NewClient(cfg.BOT_ID, cfg.BOT_TOKEN)
 
 	client.OnPrivateMessage(func(message twitch.PrivateMessage) {
-		rows, err := db.Query("SELECT * FROM commands")
+		commands, err := queryEntries(db)
 		if err != nil {
-			fmt.Println("Failed to query entries")
 			panic(err)
-		}
-		defer rows.Close()
-
-		var commands []Command
-		for rows.Next() {
-			var command Command
-			if err := rows.Scan(&command.ID, &command.Trigger, &command.Response); err != nil {
-				fmt.Println("Failed to scan entry:", err)
-				return
-			}
-			commands = append(commands, command)
 		}
 
 		for _, command := range commands {
-			if message.Message == command.Trigger {
-				client.Say(message.Channel, command.Response)
+			if command.Trigger == message.Message {
+				if cfg.USER_MENTION {
+					client.Say(message.Channel, "@"+message.User.Name+"! "+command.Response)
+				} else {
+					client.Say(message.Channel, command.Response)
+				}
 			}
 		}
 	})
