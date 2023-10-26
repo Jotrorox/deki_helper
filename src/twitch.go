@@ -1,171 +1,12 @@
 package main
 
 import (
-	"bufio"
-	"fmt"
-	"os"
-	"strings"
-
 	twitch "github.com/gempir/go-twitch-irc/v4"
-	"github.com/glebarez/sqlite"
-	toml "github.com/pelletier/go-toml"
 	"gorm.io/gorm"
 )
 
-type Config struct {
-	DB_PATH      string
-	BOT_ID       string
-	BOT_TOKEN    string
-	CHANNEL      string
-	USER_MENTION bool
-	CMD_ADD_USER []string
-}
-
-type Command struct {
-	ID       uint
-	Trigger  string
-	Response string
-}
-
-func readConfigFile(filename string) (*Config, error) {
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-	config := &Config{}
-	err = toml.Unmarshal(data, config)
-	if err != nil {
-		return nil, err
-	}
-	return config, nil
-}
-
-func createConfigFile(filename string) error {
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Database path (commands.db): ")
-	db_path, _ := reader.ReadString('\n')
-	db_path = strings.Replace(db_path, "\r\n", "", -1)
-	db_path = strings.Replace(db_path, "\n", "", -1)
-
-	fmt.Print("Your Bot Name: ")
-	bot_id, _ := reader.ReadString('\n')
-	bot_id = strings.Replace(bot_id, "\r\n", "", -1)
-	bot_id = strings.Replace(bot_id, "\n", "", -1)
-
-	fmt.Print("Your OAuth Token: ")
-	bot_token, _ := reader.ReadString('\n')
-	bot_token = "oauth:" + bot_token
-	bot_token = strings.Replace(bot_token, "\r\n", "", -1)
-	bot_token = strings.Replace(bot_token, "\n", "", -1)
-
-	fmt.Print("The Channel: ")
-	channel, _ := reader.ReadString('\n')
-	channel = strings.Replace(channel, "\r\n", "", -1)
-	channel = strings.Replace(channel, "\n", "", -1)
-
-	fmt.Print("A User able to add commands: ")
-	cmd_au, _ := reader.ReadString('\n')
-	cmd_au = strings.Replace(cmd_au, "\r\n", "", -1)
-	cmd_au = strings.Replace(cmd_au, "\n", "", -1)
-
-	fmt.Print("Mention the User after a command (y/n): ")
-	mu1, _ := reader.ReadString('\n')
-	mu1 = strings.Replace(mu1, "\r\n", "", -1)
-	mu1 = strings.Replace(mu1, "\n", "", -1)
-	mu2 := false
-	if mu1 == "y" {
-		mu2 = true
-	}
-
-	var cmd_au_arr []string
-	cmd_au_arr = append(cmd_au_arr, cmd_au)
-	cmd_au_arr = append(cmd_au_arr, channel)
-
-	config := &Config{
-		DB_PATH:      db_path,
-		BOT_ID:       bot_id,
-		BOT_TOKEN:    bot_token,
-		CHANNEL:      channel,
-		USER_MENTION: mu2,
-		CMD_ADD_USER: cmd_au_arr,
-	}
-	data, err := toml.Marshal(config)
-	if err != nil {
-		return err
-	}
-	err = os.WriteFile(filename, data, 0644)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func connectToSQLite(cfg *Config) (*gorm.DB, error) {
-	db, err := gorm.Open(sqlite.Open(cfg.DB_PATH), &gorm.Config{})
-	if err != nil {
-		return nil, err
-	}
-	return db, nil
-}
-
-func createEntryTable(db *gorm.DB) error {
-	err := db.AutoMigrate(&Command{})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func addEntry(db *gorm.DB, cmd Command) error {
-	entry := cmd
-	result := db.Create(&entry)
-	if result.Error != nil {
-		return result.Error
-	}
-	return nil
-}
-
-func UpdateRow(db *gorm.DB, keyword string, newData Command) error {
-	return db.Model(&Command{}).Where("trigger = ?", keyword).Updates(newData).Error
-}
-
-func RemoveRow(db *gorm.DB, keyword string) error {
-	return db.Where("trigger = ?", keyword).Delete(&Command{}).Error
-}
-
-func queryEntries(db *gorm.DB) ([]Command, error) {
-	var entries []Command
-	result := db.Find(&entries)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-	return entries, nil
-}
-
-func main() {
-	cfg_filename := "config.toml"
-
-	_, err := os.Stat(cfg_filename)
-	if os.IsNotExist(err) {
-		err = createConfigFile(cfg_filename)
-		if err != nil {
-			fmt.Println("Failed to create config file:", err)
-			return
-		}
-	}
-
-	cfg, _ := readConfigFile(cfg_filename)
-
-	db, err := connectToSQLite(cfg)
-	if err != nil {
-		panic(err)
-	}
-
-	err = createEntryTable(db)
-	if err != nil {
-		panic(err)
-	}
-
+// handleTwitchClient initializes and handles Twitch client operations
+func handleTwitchClient(cfg *Config, db *gorm.DB) {
 	client := twitch.NewClient(cfg.BOT_ID, cfg.BOT_TOKEN)
 
 	cmd_iter := 0
@@ -178,6 +19,7 @@ func main() {
 	delete_cmd_iter := 0
 	delete_cmd_key := ""
 
+	// Handle private messages
 	client.OnPrivateMessage(func(message twitch.PrivateMessage) {
 		for _, uname := range cfg.CMD_ADD_USER {
 			if message.User.Name == uname {
@@ -220,7 +62,7 @@ func main() {
 					update_cmd_iter = 4
 				} else if update_cmd_iter == 4 {
 					if message.Message == "yes" {
-						err = UpdateRow(db, update_cmd_key, update_tmp_command)
+						err := UpdateRow(db, update_cmd_key, update_tmp_command)
 						if err != nil {
 							client.Say(message.Channel, "@"+message.User.Name+" Something went wrong updating the command")
 							update_cmd_iter = 0
@@ -243,7 +85,7 @@ func main() {
 					delete_cmd_iter = 2
 				} else if delete_cmd_iter == 2 {
 					if message.Message == "yes" {
-						err = RemoveRow(db, delete_cmd_key)
+						err := RemoveRow(db, delete_cmd_key)
 						if err != nil {
 							client.Say(message.Channel, "@"+message.User.Name+" Something went wrong while deleting the command")
 							delete_cmd_iter = 0
@@ -277,7 +119,7 @@ func main() {
 
 	client.Join(cfg.CHANNEL)
 
-	err = client.Connect()
+	err := client.Connect()
 	if err != nil {
 		panic(err)
 	}
