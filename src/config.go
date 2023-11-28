@@ -18,20 +18,16 @@ type Config struct {
 	CMD_ADD_USER []string
 }
 
-func readConfigFile(filename string) (*Config, error) {
+func readConfigFile(filename string) *Config {
 	data, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
+	hpe(err)
 	config := &Config{}
 	err = toml.Unmarshal(data, config)
-	if err != nil {
-		return nil, err
-	}
-	return config, nil
+	hpe(err)
+	return config
 }
 
-func createConfigFile(filename string) error {
+func createConfigFile(filename string) {
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("Database path (commands.db): ")
 	db_path, _ := reader.ReadString('\n')
@@ -81,12 +77,7 @@ func createConfigFile(filename string) error {
 		CMD_ADD_USER: cmd_au_arr,
 	}
 	data, err := toml.Marshal(config)
-	if err != nil {
-		return err
-	}
+	hpe(err)
 	err = os.WriteFile(filename, data, 0644)
-	if err != nil {
-		return err
-	}
-	return nil
+	hpe(err)
 }

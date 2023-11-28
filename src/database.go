@@ -13,42 +13,32 @@ type Command struct {
 
 func connectToSQLite(cfg *Config) (*gorm.DB, error) {
 	db, err := gorm.Open(sqlite.Open(cfg.DB_PATH), &gorm.Config{})
-	if err != nil {
-		return nil, err
-	}
+	hpe(err)
 	return db, nil
 }
 
-func createEntryTable(db *gorm.DB) error {
+func createEntryTable(db *gorm.DB) {
 	err := db.AutoMigrate(&Command{})
-	if err != nil {
-		return err
-	}
-	return nil
+	hpe(err)
 }
 
-func addEntry(db *gorm.DB, cmd Command) error {
+func addEntry(db *gorm.DB, cmd Command) {
 	entry := cmd
 	result := db.Create(&entry)
-	if result.Error != nil {
-		return result.Error
-	}
-	return nil
+	hpe(result.Error)
 }
 
-func UpdateRow(db *gorm.DB, keyword string, newData Command) error {
-	return db.Model(&Command{}).Where("trigger = ?", keyword).Updates(newData).Error
+func UpdateRow(db *gorm.DB, keyword string, newData Command) {
+	hpe(db.Model(&Command{}).Where("trigger = ?", keyword).Updates(newData).Error)
 }
 
-func RemoveRow(db *gorm.DB, keyword string) error {
-	return db.Where("trigger = ?", keyword).Delete(&Command{}).Error
+func RemoveRow(db *gorm.DB, keyword string) {
+	hpe(db.Where("trigger = ?", keyword).Delete(&Command{}).Error)
 }
 
-func queryEntries(db *gorm.DB) ([]Command, error) {
+func queryEntries(db *gorm.DB) []Command {
 	var entries []Command
 	result := db.Find(&entries)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-	return entries, nil
+	hpe(result.Error)
+	return entries
 }

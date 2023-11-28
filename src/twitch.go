@@ -62,14 +62,9 @@ func handleTwitchClient(cfg *Config, db *gorm.DB) {
 					update_cmd_iter = 4
 				} else if update_cmd_iter == 4 {
 					if message.Message == "yes" {
-						err := UpdateRow(db, update_cmd_key, update_tmp_command)
-						if err != nil {
-							client.Say(message.Channel, "@"+message.User.Name+" Something went wrong updating the command")
-							update_cmd_iter = 0
-						} else {
-							client.Say(message.Channel, "@"+message.User.Name+" The command has been updated")
-							update_cmd_iter = 0
-						}
+						UpdateRow(db, update_cmd_key, update_tmp_command)
+						client.Say(message.Channel, "@"+message.User.Name+" The command has been updated")
+						update_cmd_iter = 0
 					} else {
 						client.Say(message.Channel, "@"+message.User.Name+" The command updating process has been aborted")
 						update_cmd_iter = 0
@@ -85,14 +80,9 @@ func handleTwitchClient(cfg *Config, db *gorm.DB) {
 					delete_cmd_iter = 2
 				} else if delete_cmd_iter == 2 {
 					if message.Message == "yes" {
-						err := RemoveRow(db, delete_cmd_key)
-						if err != nil {
-							client.Say(message.Channel, "@"+message.User.Name+" Something went wrong while deleting the command")
-							delete_cmd_iter = 0
-						} else {
-							client.Say(message.Channel, "@"+message.User.Name+" The command has been deleted")
-							delete_cmd_iter = 0
-						}
+						RemoveRow(db, delete_cmd_key)
+						client.Say(message.Channel, "@"+message.User.Name+" The command has been deleted")
+						delete_cmd_iter = 0
 					} else {
 						client.Say(message.Channel, "@"+message.User.Name+" The command deleting process has been aborted")
 						delete_cmd_iter = 0
@@ -101,10 +91,7 @@ func handleTwitchClient(cfg *Config, db *gorm.DB) {
 			}
 		}
 
-		commands, err := queryEntries(db)
-		if err != nil {
-			panic(err)
-		}
+		commands := queryEntries(db)
 
 		for _, command := range commands {
 			if command.Trigger == message.Message {

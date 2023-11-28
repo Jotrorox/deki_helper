@@ -2,7 +2,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 )
 
@@ -11,24 +10,15 @@ func main() {
 
 	_, err := os.Stat(cfg_filename)
 	if os.IsNotExist(err) {
-		err = createConfigFile(cfg_filename)
-		if err != nil {
-			fmt.Println("Failed to create config file:", err)
-			return
-		}
+		createConfigFile(cfg_filename)
 	}
 
-	cfg, _ := readConfigFile(cfg_filename)
+	cfg := readConfigFile(cfg_filename)
 
 	db, err := connectToSQLite(cfg)
-	if err != nil {
-		panic(err)
-	}
+	hpe(err)
 
-	err = createEntryTable(db)
-	if err != nil {
-		panic(err)
-	}
+	createEntryTable(db)
 
 	// Initialize and handle Twitch client operations
 	handleTwitchClient(cfg, db)
